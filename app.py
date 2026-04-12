@@ -4,13 +4,12 @@ import math
 import time
 
 # 1. Configuração do Dashboard (Responsivo)
-st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Reduzido (A cor principal agora é gerenciada pelo config.toml)
+# CSS para métricas
 st.markdown("""
     <style>
     div[data-testid="stMetricValue"] { font-size: 26px; color: #58a6ff; }
-    /* Ajuste de espaçamento para Mobile */
     @media (max-width: 768px) {
         div[data-testid="stMetricValue"] { font-size: 22px; }
     }
@@ -30,43 +29,7 @@ if 'r' not in st.session_state:
     st.session_state.t = 0.73
     st.session_state.lancado = False
 
-# 3. Sidebar (Controles adaptáveis para menu hambúrguer no celular)
-with st.sidebar:
-    st.header("Presets de Experimento")
-    col_b1, col_b2, col_b3 = st.columns(3)
-    
-    if col_b1.button("E1"):
-        st.session_state.update(dados_ensaios["Ensaio 1"])
-        st.session_state.lancado = False
-    if col_b2.button("E2"):
-        st.session_state.update(dados_ensaios["Ensaio 2"])
-        st.session_state.lancado = False
-    if col_b3.button("E3"):
-        st.session_state.update(dados_ensaios["Ensaio 3"])
-        st.session_state.lancado = False
-
-    st.markdown("---")
-    st.header("Ajuste Fino")
-    r_mm = st.number_input("Raio (mm)", value=st.session_state.r, step=0.01, format="%.2f")
-    m_g = st.number_input("Massa (g)", value=st.session_state.m, step=0.01, format="%.2f")
-    t_s = st.number_input("Tempo (s)", value=st.session_state.t, step=0.01, format="%.2f")
-    rho_l = st.number_input("Dens. Fluido (kg/m³)", value=982.2, step=0.1)
-    dist_m = st.number_input("Distância (m)", value=0.435, step=0.005, format="%.3f")
-
-# 4. Processamento Analítico
-g = 9.81
-r_m = r_mm / 1000
-vol_m3 = (4/3) * math.pi * (r_m**3)
-rho_e = (m_g / 1000) / vol_m3
-v_terminal = dist_m / t_s
-
-viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
-viscosidade_cp = viscosidade * 1000  
-
-is_floating = rho_e < rho_l
-
-# 5. Interface Principal
-# Cabeçalho Institucional 
+# 3. Cabeçalho Institucional
 st.markdown("""
 <div style="color: #8b949e; font-size: 12px; margin-top: -40px; margin-bottom: 25px; line-height: 1.6; text-transform: uppercase; letter-spacing: 0.5px;">
     <b>Centro Universitário Leonardo da Vinci – UNIASSELVI</b><br>
@@ -78,76 +41,69 @@ st.markdown("""
 st.title("Laboratório Digital - Lei de Stokes")
 st.markdown("---")
 
-# Layout de Colunas (No desktop = lado a lado; No Mobile = empilhadas)
-col_dados, col_visual = st.columns([3, 2])
+# 4. PAINEL DE CONTROLE (Abolida a Sidebar, tudo em tela principal)
+st.subheader("⚙️ Configuração do Ensaio")
 
-with col_dados:
-    st.subheader("Controle de Ensaio")
+# Layout responsivo para os controles
+col_preset, col_medicao, col_constante = st.columns([1, 1.5, 1.5])
+
+with col_preset:
+    st.markdown("**Carregar Dados:**")
+    if st.button("Ensaio 1 (E1)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Ensaio 1"])
+        st.session_state.lancado = False
+    if st.button("Ensaio 2 (E2)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Ensaio 2"])
+        st.session_state.lancado = False
+    if st.button("Ensaio 3 (E3)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Ensaio 3"])
+        st.session_state.lancado = False
     
-    # Botões adaptativos para telas pequenas
-    if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
-        st.session_state.lancado = True
-    
-    st.link_button("📹 Acessar Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
+    st.link_button("📹 Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    placeholder = st.empty()
-    
-    if not st.session_state.lancado:
-        placeholder.info("Aguardando lançamento. Os dados de metrologia serão exibidos após o término da queda.")
-    else:
-        with placeholder.container():
-            if is_floating:
-                st.error("⚠️ FALHA: A densidade da esfera é inferior à do fluido. Empuxo superior ao Peso.")
-            else:
-                with st.spinner(f"Monitorando cinemática de queda... Aguardando {t_s}s."):
-                    time.sleep(t_s)
-                
-                st.success("✅ Fundo atingido. Equilíbrio de Stokes calculado.")
-                
-                # KPIs responsivos
-                m1, m2, m3 = st.columns(3)
-                m1.metric("VELOCIDADE", f"{v_terminal:.4f} m/s")
-                
-                m2.metric("VISCOSIDADE (η)", f"{viscosidade:.4f} Pa·s")
-                m2.markdown(f"<div style='color:#8b949e; font-size:15px; margin-top:-15px; font-weight:bold;'>{viscosidade_cp:.2f} cP</div>", unsafe_allow_html=True)
-                
-                m3.metric("DENS. ESF (ρ)", f"{rho_e:.1f} kg/m³")
-                
-                # Memória de Cálculo Expansível
-                with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
-                    st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
-                    st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = \frac{{4}}{{3}} \pi ({r_m:.6f})^3 = {vol_m3:.3e} \, m^3")
-                    st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = \frac{{{m_g/1000:.6f}}}{{{vol_m3:.3e}}} = {rho_e:.2f} \, kg/m^3")
+with col_medicao:
+    st.markdown("**Ajuste Metrológico:**")
+    r_mm = st.number_input("Raio (mm)", value=st.session_state.r, step=0.01, format="%.2f")
+    m_g = st.number_input("Massa (g)", value=st.session_state.m, step=0.01, format="%.2f")
+    t_s = st.number_input("Tempo (s)", value=st.session_state.t, step=0.01, format="%.2f")
 
-                    st.markdown("**2. Determinação da Velocidade Terminal ($v$)**")
-                    st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
+with col_constante:
+    st.markdown("**Constantes do Sistema:**")
+    rho_l = st.number_input("Dens. Fluido (kg/m³)", value=982.2, step=0.1)
+    dist_m = st.number_input("Distância (m)", value=0.435, step=0.005, format="%.3f")
 
-                    st.markdown("**3. Equação da Lei de Stokes**")
-                    st.markdown("""
-                    * **$\\eta$**: Viscosidade dinâmica do fluido ($Pa \cdot s$)
-                    * **$r$**: Raio da esfera ($m$)
-                    * **$g$**: Aceleração da gravidade ($9,81 \, m/s^2$)
-                    * **$\\rho_e$**: Densidade da esfera ($kg/m^3$)
-                    * **$\\rho_L$**: Densidade do fluido ($kg/m^3$)
-                    * **$v$**: Velocidade terminal ($m/s$)
-                    """)
-                    st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
-                    
-                    st.markdown("**Substituição e Conversão Final:**")
-                    st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
-                    st.latex(rf"\eta_{{cP}} = {viscosidade:.4f} \cdot 1000 = \mathbf{{{viscosidade_cp:.2f} \, cP}}")
+st.markdown("---")
+
+# 5. Processamento Analítico
+g = 9.81
+r_m = r_mm / 1000
+vol_m3 = (4/3) * math.pi * (r_m**3)
+rho_e = (m_g / 1000) / vol_m3
+v_terminal = dist_m / t_s
+
+viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
+viscosidade_cp = viscosidade * 1000  
+
+is_floating = rho_e < rho_l
+
+# 6. SIMULAÇÃO E RESULTADOS
+# Simulação na esquerda (garante que fique em cima no mobile, logo após o botão lançar)
+col_visual, col_laudo = st.columns([2, 3], gap="large")
 
 with col_visual:
+    st.subheader("Análise Cinemática")
+    
+    # O botão de lançar agora fica colado na proveta
+    if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
+        st.session_state.lancado = True
+        
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
     
-    # HTML responsivo focado na visualização mobile (flexbox)
     html_content = f"""
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent; padding: 10px; width: 100%;">
-        <div style="color: #8b949e; margin-bottom: 10px; font-family: sans-serif; font-size: 14px; text-align: center;">Monitoramento da Proveta</div>
-        <canvas id="stokesCanvas" width="220" height="420" style="background: #0d1117; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></canvas>
+    <div style="display: flex; flex-direction: column; align-items: center; background: transparent; padding: 10px; width: 100%;">
+        <canvas id="stokesCanvas" width="220" height="420" style="background: #0d1117; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #30363d;"></canvas>
         <div id="status" style="margin-top:15px; color:#58a6ff; font-family:sans-serif; font-weight:bold; text-align: center;">
-            {('AQUISIÇÃO DE DADOS...' if st.session_state.lancado and not is_floating else 'SISTEMA PRONTO')}
+            {('AQUISIÇÃO DE DADOS...' if st.session_state.lancado and not is_floating else 'PRONTO PARA LANÇAMENTO')}
         </div>
     </div>
     <script>
@@ -231,8 +187,43 @@ with col_visual:
         }}
     </script>
     """
-    # A altura adaptável evita cortes na tela do celular
-    components.html(html_content, height=500)
+    components.html(html_content, height=480)
+
+with col_laudo:
+    st.subheader("Laudo Técnico")
+    placeholder = st.empty()
+    
+    if not st.session_state.lancado:
+        placeholder.info("Configure os dados e dispare o lançamento na coluna ao lado.")
+    else:
+        with placeholder.container():
+            if is_floating:
+                st.error("⚠️ FALHA: A densidade da esfera é inferior à do fluido. Empuxo superior ao Peso.")
+            else:
+                with st.spinner(f"Aguardando queda ({t_s}s)..."):
+                    time.sleep(t_s)
+                
+                st.success("✅ Equilíbrio de Stokes calculado com sucesso.")
+                
+                m1, m2 = st.columns(2)
+                m1.metric("VELOCIDADE TERMINAL", f"{v_terminal:.4f} m/s")
+                m2.metric("DENSIDADE (Esfera)", f"{rho_e:.1f} kg/m³")
+                
+                st.metric("VISCOSIDADE DINÂMICA (η)", f"{viscosidade:.4f} Pa·s")
+                st.markdown(f"<div style='color:#8b949e; font-size:18px; margin-top:-15px; font-weight:bold;'>{viscosidade_cp:.2f} cP</div>", unsafe_allow_html=True)
+                
+                with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
+                    st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
+                    st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3")
+                    st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = {rho_e:.2f} \, kg/m^3")
+
+                    st.markdown("**2. Determinação da Velocidade ($v$)**")
+                    st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
+
+                    st.markdown("**3. Equação da Lei de Stokes**")
+                    st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
+                    st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
+                    st.latex(rf"\eta_{{cP}} = {viscosidade:.4f} \cdot 1000 = \mathbf{{{viscosidade_cp:.2f} \, cP}}")
 
 if st.session_state.lancado:
     st.session_state.lancado = False
