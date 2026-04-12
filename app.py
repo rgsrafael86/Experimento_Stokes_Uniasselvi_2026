@@ -50,7 +50,7 @@ with st.sidebar:
     rho_l = st.number_input("Dens. Fluido (kg/m³)", value=982.2, step=0.1)
     dist_m = st.number_input("Distância (m)", value=0.435, step=0.005, format="%.3f")
 
-# 4. Processamento Analítico (Matemática Pura de Stokes)
+# 4. Processamento Analítico
 g = 9.81
 r_m = r_mm / 1000
 vol_m3 = (4/3) * math.pi * (r_m**3)
@@ -58,9 +58,20 @@ rho_e = (m_g / 1000) / vol_m3
 v_terminal = dist_m / t_s
 
 viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
+viscosidade_cp = viscosidade * 1000  # Conversão para Centipoise (1 Pa.s = 1000 cP)
+
 is_floating = rho_e < rho_l
 
 # 5. Interface Principal
+# Cabeçalho Institucional Discreto
+st.markdown("""
+<div style="color: #6e7681; font-size: 13px; margin-top: -30px; margin-bottom: 20px; line-height: 1.5;">
+    <b>CENTRO UNIVERSITÁRIO LEONARDO DA VINCI – UNIASSELVI</b><br>
+    Faculdade de engenharias mecânica e produção.<br>
+    <i>Cristan W. | João V. | Luciane A. | Rafael G.</i>
+</div>
+""", unsafe_allow_html=True)
+
 st.title("Laboratório Digital - Lei de Stokes")
 st.markdown("---")
 
@@ -93,10 +104,14 @@ with col_dados:
                 st.success("✅ Fundo atingido. Equilíbrio de Stokes calculado.")
                 m1, m2, m3 = st.columns(3)
                 m1.metric("VELOCIDADE", f"{v_terminal:.4f} m/s")
+                
+                # Exibição da Viscosidade em Pa.s com cP logo abaixo
                 m2.metric("VISCOSIDADE (η)", f"{viscosidade:.4f} Pa·s")
+                m2.markdown(f"<div style='color:#8b949e; font-size:16px; margin-top:-15px;'><b>{viscosidade_cp:.2f} cP</b></div>", unsafe_allow_html=True)
+                
                 m3.metric("DENS. ESF (ρ)", f"{rho_e:.1f} kg/m³")
                 
-                # Memória de Cálculo Expansível (Focada na Ementa)
+                # Memória de Cálculo Expansível
                 with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
                     
                     st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
@@ -118,8 +133,9 @@ with col_dados:
                     """)
                     st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
                     
-                    st.markdown("**Substituição dos Valores:**")
+                    st.markdown("**Substituição e Conversão Final:**")
                     st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
+                    st.latex(rf"\eta_{{cP}} = {viscosidade:.4f} \cdot 1000 = \mathbf{{{viscosidade_cp:.2f} \, cP}}")
 
 with col_visual:
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
