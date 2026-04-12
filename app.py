@@ -50,20 +50,14 @@ with st.sidebar:
     rho_l = st.number_input("Dens. Fluido (kg/m³)", value=982.2, step=0.1)
     dist_m = st.number_input("Distância (m)", value=0.435, step=0.005, format="%.3f")
 
-# 4. Processamento Analítico (Matemática Rigorosa)
+# 4. Processamento Analítico (Matemática Pura de Stokes)
 g = 9.81
 r_m = r_mm / 1000
 vol_m3 = (4/3) * math.pi * (r_m**3)
 rho_e = (m_g / 1000) / vol_m3
-
-# Forças (Newtons)
-peso_N = (m_g / 1000) * g
-empuxo_N = rho_l * vol_m3 * g
-
-# Cinemática
 v_terminal = dist_m / t_s
-viscosidade_aparente = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
 
+viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
 is_floating = rho_e < rho_l
 
 # 5. Interface Principal
@@ -98,29 +92,34 @@ with col_dados:
                 
                 st.success("✅ Fundo atingido. Equilíbrio de Stokes calculado.")
                 m1, m2, m3 = st.columns(3)
-                m1.metric("VEL. CORRIGIDA", f"{v_corrigida:.4f} m/s")
-                m2.metric("VISCOSIDADE REAL", f"{viscosidade_corrigida:.4f} Pa·s")
-                m3.metric("FATOR LADENBURG", f"{fator_ladenburg:.3f}")
+                m1.metric("VELOCIDADE", f"{v_terminal:.4f} m/s")
+                m2.metric("VISCOSIDADE (η)", f"{viscosidade:.4f} Pa·s")
+                m3.metric("DENS. ESF (ρ)", f"{rho_e:.1f} kg/m³")
                 
-                # Memória de Cálculo Expansível e Completa
-                with st.expander("📊 Acessar Memória de Cálculo Completa", expanded=True):
-                    st.markdown("**1. Parâmetros Volumétricos e Balanço de Forças:**")
-                    st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3")
-                    st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = {rho_e:.1f} \, kg/m^3")
-                    st.latex(rf"Peso \, (P) = m \cdot g = {peso_N:.4e} \, N")
-                    st.latex(rf"Empuxo \, (E) = \rho_L \cdot V_e \cdot g = {empuxo_N:.4e} \, N")
-
-                    st.markdown("**2. Viscosidade Aparente (Sem Correção):**")
-                    st.latex(rf"v_{{medida}} = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
-                    st.latex(rf"\eta_{{aparente}} = \frac{{2r^2 g (\rho_e - \rho_L)}}{{9 v_{{medida}}}} = {viscosidade_aparente:.4f} \, Pa \cdot s")
-
-                    st.markdown("**3. Efeito de Parede (Fator de Ladenburg):**")
-                    st.info("O raio da proveta (30,65 mm) freia o escoamento ao redor da esfera. A correção é obrigatória.")
-                    st.latex(rf"F_L = 1 + 2,1 \left(\frac{{r}}{{R_{{proveta}}}}\right) = 1 + 2,1 \left(\frac{{{r_mm:.2f}}}{{30,65}}\right) = {fator_ladenburg:.4f}")
-                    st.latex(rf"v_{{corrigida}} = v_{{medida}} \cdot F_L = {v_corrigida:.4f} \, m/s")
+                # Memória de Cálculo Expansível (Focada na Ementa)
+                with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
                     
-                    st.markdown("**4. Viscosidade Dinâmica Corrigida ($\eta_c$):**")
-                    st.latex(rf"\eta_c = \frac{{\eta_{{aparente}}}}{{F_L}} = \mathbf{{{viscosidade_corrigida:.4f} \, Pa \cdot s}}")
+                    st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
+                    st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = \frac{{4}}{{3}} \pi ({r_m:.6f})^3 = {vol_m3:.3e} \, m^3")
+                    st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = \frac{{{m_g/1000:.6f}}}{{{vol_m3:.3e}}} = {rho_e:.2f} \, kg/m^3")
+
+                    st.markdown("**2. Determinação da Velocidade Terminal ($v$)**")
+                    st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
+
+                    st.markdown("**3. Equação da Lei de Stokes**")
+                    st.markdown("""
+                    **Declaração de Variáveis:**
+                    * **$\\eta$**: Viscosidade dinâmica do fluido ($Pa \cdot s$)
+                    * **$r$**: Raio da esfera ($m$)
+                    * **$g$**: Aceleração da gravidade ($9,81 \, m/s^2$)
+                    * **$\\rho_e$**: Densidade da esfera ($kg/m^3$)
+                    * **$\\rho_L$**: Densidade do fluido ($kg/m^3$)
+                    * **$v$**: Velocidade terminal ($m/s$)
+                    """)
+                    st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
+                    
+                    st.markdown("**Substituição dos Valores:**")
+                    st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
 
 with col_visual:
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
