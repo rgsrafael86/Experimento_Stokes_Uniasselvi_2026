@@ -11,7 +11,7 @@ st.markdown("""
     .main { background-color: #0e1117; }
     div[data-testid="stMetricValue"] { font-size: 28px; color: #f0f2f6; }
     </style>
-    """, unsafe_allow_stdio=True)
+    """, unsafe_allow_html=True)
 
 st.title("Simulador da Lei de Stokes")
 st.caption("Análise de Viscosidade em Fluidos Newtonianos - Fenômenos de Transporte")
