@@ -16,17 +16,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Dados Experimentais de Bancada
+# 2. Dados Experimentais de Bancada (Extração via Vídeo)
 dados_ensaios = {
-    "Ensaio 1": {"r": 5.55, "m": 5.60, "t": 0.43},
-    "Ensaio 2": {"r": 3.50, "m": 1.43, "t": 0.60},
-    "Ensaio 3": {"r": 3.00, "m": 0.91, "t": 0.73}
+    "Maior": {"r": 5.55, "m": 5.60, "t": 0.49},
+    "Media": {"r": 3.50, "m": 1.43, "t": 0.83},
+    "Menor": {"r": 3.00, "m": 0.91, "t": 0.95}
 }
 
 if 'r' not in st.session_state:
-    st.session_state.r = 3.00
-    st.session_state.m = 0.91
-    st.session_state.t = 0.73
+    st.session_state.r = 5.55
+    st.session_state.m = 5.60
+    st.session_state.t = 0.49
     st.session_state.lancado = False
 
 # 3. Cabeçalho Institucional
@@ -47,15 +47,15 @@ st.subheader("⚙️ Configuração do Ensaio")
 col_preset, col_medicao, col_constante = st.columns([1, 1.5, 1.5])
 
 with col_preset:
-    st.markdown("**Carregar Dados:**")
-    if st.button("Ensaio 1 (E1)", use_container_width=True): 
-        st.session_state.update(dados_ensaios["Ensaio 1"])
+    st.markdown("**Seleção de Esfera:**")
+    if st.button("Esfera Maior (5,55mm)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Maior"])
         st.session_state.lancado = False
-    if st.button("Ensaio 2 (E2)", use_container_width=True): 
-        st.session_state.update(dados_ensaios["Ensaio 2"])
+    if st.button("Esfera Média (3,50mm)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Media"])
         st.session_state.lancado = False
-    if st.button("Ensaio 3 (E3)", use_container_width=True): 
-        st.session_state.update(dados_ensaios["Ensaio 3"])
+    if st.button("Esfera Menor (3,00mm)", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Menor"])
         st.session_state.lancado = False
     
     st.link_button("📹 Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
@@ -187,7 +187,7 @@ with col_visual:
     components.html(html_content, height=480)
 
 with col_laudo:
-    st.subheader("Resultados do ensaio")
+    st.subheader("Laudo Técnico")
     placeholder = st.empty()
     
     if not st.session_state.lancado:
