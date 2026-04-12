@@ -41,10 +41,9 @@ st.markdown("""
 st.title("Laboratório Digital - Lei de Stokes")
 st.markdown("---")
 
-# 4. PAINEL DE CONTROLE (Abolida a Sidebar, tudo em tela principal)
+# 4. PAINEL DE CONTROLE 
 st.subheader("⚙️ Configuração do Ensaio")
 
-# Layout responsivo para os controles
 col_preset, col_medicao, col_constante = st.columns([1, 1.5, 1.5])
 
 with col_preset:
@@ -87,20 +86,18 @@ viscosidade_cp = viscosidade * 1000
 is_floating = rho_e < rho_l
 
 # 6. SIMULAÇÃO E RESULTADOS
-# Simulação na esquerda (garante que fique em cima no mobile, logo após o botão lançar)
 col_visual, col_laudo = st.columns([2, 3], gap="large")
 
 with col_visual:
     st.subheader("Análise Cinemática")
     
-    # O botão de lançar agora fica colado na proveta
     if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
         st.session_state.lancado = True
         
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
     
     html_content = f"""
-    <div style="display: flex; flex-direction: column; align-items: center; background: transparent; padding: 10px; width: 100%;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent; padding: 10px; width: 100%;">
         <canvas id="stokesCanvas" width="220" height="420" style="background: #0d1117; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #30363d;"></canvas>
         <div id="status" style="margin-top:15px; color:#58a6ff; font-family:sans-serif; font-weight:bold; text-align: center;">
             {('AQUISIÇÃO DE DADOS...' if st.session_state.lancado and not is_floating else 'PRONTO PARA LANÇAMENTO')}
@@ -213,14 +210,18 @@ with col_laudo:
                 st.markdown(f"<div style='color:#8b949e; font-size:18px; margin-top:-15px; font-weight:bold;'>{viscosidade_cp:.2f} cP</div>", unsafe_allow_html=True)
                 
                 with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
+                    
                     st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
+                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $V_e$: Volume ($m^3$) | $r$: Raio ($m$) | $m$: Massa ($kg$) | $\\rho_e$: Densidade ($kg/m^3$)</div>", unsafe_allow_html=True)
                     st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3")
                     st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = {rho_e:.2f} \, kg/m^3")
 
                     st.markdown("**2. Determinação da Velocidade ($v$)**")
+                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $v$: Velocidade ($m/s$) | $d$: Distância ($m$) | $t$: Tempo ($s$)</div>", unsafe_allow_html=True)
                     st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
 
                     st.markdown("**3. Equação da Lei de Stokes**")
+                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $\\eta$: Viscosidade ($Pa\cdot s$) | $g$: Gravidade ($9,81 \, m/s^2$) | $\\rho_L$: Densidade do Fluido ($kg/m^3$)</div>", unsafe_allow_html=True)
                     st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
                     st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
                     st.latex(rf"\eta_{{cP}} = {viscosidade:.4f} \cdot 1000 = \mathbf{{{viscosidade_cp:.2f} \, cP}}")
