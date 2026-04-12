@@ -2,182 +2,126 @@ import streamlit as st
 import streamlit.components.v1 as components
 import math
 
-# Configuração da Página
-st.set_page_config(page_title="Simulador de Stokes", layout="wide")
-st.title("Simulador Fenomenológico - Lei de Stokes")
-st.markdown("Insira os parâmetros, lance a esfera e aguarde a conclusão do ensaio para obter o laudo técnico.")
-st.markdown("---")
+# Configuração de Interface Técnica
+st.set_page_config(page_title="Simulador de Stokes - Engenharia", layout="wide")
 
-# 1. Entradas de Dados (Sidebar)
-st.sidebar.header("Parâmetros do Experimento")
-r_mm = st.sidebar.number_input("Raio da Esfera (mm)", value=3.00, format="%.2f")
-m_g = st.sidebar.number_input("Massa da Esfera (g)", value=0.91, format="%.2f")
-rho_l = st.sidebar.number_input("Densidade do Fluido (kg/m³)", value=982.2, format="%.1f")
-dist_m = st.sidebar.number_input("Distância de Queda (m)", value=0.435, format="%.3f")
-t_s = st.sidebar.number_input("Tempo de Queda (s)", value=0.73, format="%.2f")
+# Estilização customizada para simular o Dashboard da imagem
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    div[data-testid="stMetricValue"] { font-size: 28px; color: #f0f2f6; }
+    </style>
+    """, unsafe_allow_stdio=True)
 
-# 2. Processamento do Backend (Python)
-r_m = r_mm / 1000
-m_kg = m_g / 1000
-vol_m3 = (4/3) * math.pi * (r_m ** 3)
-rho_e = m_kg / vol_m3
-v_ms = dist_m / t_s
+st.title("Simulador da Lei de Stokes")
+st.caption("Análise de Viscosidade em Fluidos Newtonianos - Fenômenos de Transporte")
+
+# --- BLOCO DE CÁLCULO (BACKEND PYTHON) ---
+# Inputs via Sliders na base da página (conforme imagem)
+col_in1, col_in2, col_in3 = st.columns(3)
+with col_in1:
+    r_mm = st.slider("Raio da Esfera (mm)", 1.0, 10.0, 3.0, 0.1)
+    m_g = st.slider("Massa da Esfera (g)", 0.1, 10.0, 0.91, 0.01)
+with col_in2:
+    rho_l = st.slider("Densidade do Fluido (kg/m³)", 800.0, 1500.0, 982.2, 0.1)
+    dist_m = st.slider("Distância de Queda (m)", 0.1, 1.0, 0.435, 0.005)
+with col_in3:
+    t_s = st.slider("Tempo de Queda (s)", 0.1, 5.0, 0.73, 0.01)
+
+# Processamento Analítico
 g = 9.81
+r_m = r_mm / 1000
+vol_m3 = (4/3) * math.pi * (r_m**3)
+rho_e = (m_g / 1000) / vol_m3
+v_terminal = dist_m / t_s
+viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal)
 
-if v_ms > 0:
-    viscosidade = (2 * (r_m ** 2) * g * (rho_e - rho_l)) / (9 * v_ms)
-else:
-    viscosidade = 0
+# --- EXIBIÇÃO DE KPIS (TOPO) ---
+st.markdown("---")
+kpi1, kpi2, kpi3 = st.columns(3)
+kpi1.metric("VESF (M/S)", f"{v_terminal:.4f}")
+kpi2.metric("VISCOSIDADE (PA.S)", f"{viscosidade:.4f}")
+kpi3.metric("DENS. ESF (KG/M³)", f"{rho_e:.2f}")
 
-# Verificação de Fluabilidade
-is_floating = rho_e < rho_l
+# --- COMPONENTE VISUAL (HTML5/CANVAS) ---
+# Este bloco injeta o visual da proveta graduada
+html_content = f"""
+<div style="display: flex; flex-direction: column; align-items: center; background: #161b22; padding: 20px; border-radius: 15px;">
+    <div style="color: #8b949e; margin-bottom: 10px;">Equilíbrio de Stokes calculado com sucesso.</div>
+    <canvas id="stokesCanvas" width="200" height="400" style="border: 2px solid #30363d; background: #0d1117;"></canvas>
+    <button onclick="startSim()" style="margin-top: 15px; padding: 10px 30px; background: #238636; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Lançar Esfera</button>
+    <div id="status" style="margin-top: 10px; color: #58a6ff; font-weight: bold;"></div>
+</div>
 
-# 3. Construção do Frontend Assíncrono (HTML/JS Injetado)
-html_simulador = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-    body {{ font-family: "Source Sans Pro", sans-serif; color: #FAFAFA; background-color: #0E1117; margin: 0; padding: 0; display: flex; flex-direction: row; gap: 40px; }}
+<script>
+    const canvas = document.getElementById('stokesCanvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
     
-    /* Coluna da Simulação */
-    .sim-container {{ flex: 1; display: flex; flex-direction: column; align-items: center; background-color: #262730; padding: 20px; border-radius: 10px; }}
-    canvas {{ border: 4px solid #555; border-top: none; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; background-color: #00bcd4; opacity: 0.8; margin-bottom: 20px; }}
-    button {{ padding: 12px 24px; background-color: #2e7b32; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; max-width: 200px; }}
-    button:hover {{ background-color: #3b9b40; }}
-    button:disabled {{ background-color: #555; cursor: not-allowed; }}
-    
-    /* Coluna de Resultados (Oculta Inicialmente) */
-    .results-container {{ flex: 1; display: none; flex-direction: column; gap: 15px; padding-top: 20px; }}
-    .metric-box {{ background-color: #262730; padding: 15px 20px; border-radius: 8px; }}
-    .metric-title {{ font-size: 14px; color: #a1a1aa; margin-bottom: 5px; display: block; }}
-    .metric-value {{ font-size: 24px; font-weight: 600; }}
-    .success-box {{ background-color: #0e3b20; border: 1px solid #1a6b3b; color: #4ade80; }}
-    .error-box {{ background-color: #4a0e0e; border: 1px solid #6b1a1a; color: #ff6b6b; }}
-</style>
-</head>
-<body>
+    let y = 50;
+    let animating = false;
+    const v = {v_terminal} * 50; // Escala de animação
+    const r = {r_mm} * 2;
 
-    <div class="sim-container">
-        <canvas id="provetaCanvas" width="120" height="400"></canvas>
-        <button id="btnLancar" onclick="iniciarQueda()">Lançar Esfera</button>
-    </div>
-
-    <div class="results-container" id="painelResultados">
-        <h2 style="margin-top:0;">Laudo Técnico</h2>
-        <div class="metric-box">
-            <span class="metric-title">Volume da Esfera (m³)</span>
-            <span class="metric-value">{vol_m3:.2e}</span>
-        </div>
-        <div class="metric-box">
-            <span class="metric-title">Densidade da Esfera (kg/m³)</span>
-            <span class="metric-value">{rho_e:.2f}</span>
-        </div>
-        <div class="metric-box">
-            <span class="metric-title">Velocidade Terminal (m/s)</span>
-            <span class="metric-value">{v_ms:.4f}</span>
-        </div>
+    function draw() {{
+        ctx.clearRect(0, 0, 200, 400);
         
-        <div class="metric-box {'error-box' if is_floating else 'success-box'}">
-            <span class="metric-title">{'Erro Físico Detectado' if is_floating else 'Viscosidade Dinâmica (η)'}</span>
-            <span class="metric-value">{'Esfera Flutuará (Empuxo > Peso)' if is_floating else f"{viscosidade:.4f} Pa.s"}</span>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('provetaCanvas');
-        const ctx = canvas.getContext('2d');
-        const btnLancar = document.getElementById('btnLancar');
-        const painelResultados = document.getElementById('painelResultados');
+        // Desenha Líquido
+        ctx.fillStyle = "rgba(0, 188, 212, 0.2)";
+        ctx.fillRect(50, 20, 100, 360);
         
-        // Dados injetados do Python
-        const r_pixel = Math.max(5, Math.min({r_mm} * 2, 50));
-        const velocidade = {v_ms};
-        const flutua = {'true' if is_floating else 'false'} === 'true';
-        
-        // Cinemática
-        const vel_animacao = velocidade * 15; 
-        const pos_inicial = 30;
-        const pos_final = 400 - r_pixel - 5;
-        let y = pos_inicial;
-        let animacao;
-        let emMovimento = false;
-
-        function desenharCena(posY) {{
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Fluido e Graduações
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            for(let i = 50; i < 400; i += 50) {{
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(15, i); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(105, i); ctx.lineTo(120, i); ctx.stroke();
-            }}
-
-            // Sólido
-            ctx.beginPath();
-            ctx.arc(60, posY, r_pixel, 0, Math.PI * 2);
-            ctx.fillStyle = '#222';
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.stroke();
-            
-            // Reflexo Especular
-            ctx.beginPath();
-            ctx.arc(55, posY - r_pixel*0.3, r_pixel * 0.25, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fill();
+        // Graduação
+        ctx.strokeStyle = "#30363d";
+        for(let i=0; i<=5; i++) {{
+            let h = 380 - (i * 72);
+            ctx.beginPath(); ctx.moveTo(40, h); ctx.lineTo(60, h); ctx.stroke();
+            ctx.fillStyle = "#8b949e";
+            ctx.fillText(((i * {dist_m}/5).toFixed(2) + "m"), 10, h+5);
         }}
 
-        function loopFisica() {{
-            if (!flutua) {{
-                y += vel_animacao;
-                if (y >= pos_final) {{
-                    y = pos_final;
-                    finalizarEnsaio();
-                    return;
-                }}
-            }} else {{
-                y -= vel_animacao * 0.5; 
-                if (y <= pos_inicial) {{
-                    y = pos_inicial;
-                    finalizarEnsaio();
-                    return;
-                }}
-            }}
-            
-            desenharCena(y);
-            animacao = requestAnimationFrame(loopFisica);
-        }}
+        // Esfera
+        ctx.beginPath();
+        ctx.arc(100, y, r, 0, Math.PI*2);
+        ctx.fillStyle = "#f08080";
+        ctx.fill();
+        ctx.stroke();
+    }}
 
-        function iniciarQueda() {{
-            if (emMovimento) return;
-            // Reseta UI
-            painelResultados.style.display = 'none';
-            btnLancar.disabled = true;
-            btnLancar.innerText = 'Em Análise...';
-            
-            // Ponto de partida
-            y = flutua ? pos_final : pos_inicial;
-            emMovimento = true;
-            loopFisica();
-        }}
+    function startSim() {{
+        if(animating) return;
+        y = 50;
+        animating = true;
+        status.innerText = "";
+        animate();
+    }}
 
-        function finalizarEnsaio() {{
-            emMovimento = false;
-            cancelAnimationFrame(animacao);
-            desenharCena(y);
-            
-            // Aciona Gatilho UI - Revela os dados
-            btnLancar.innerText = 'Ensaio Concluído';
-            painelResultados.style.display = 'flex';
+    function animate() {{
+        if(y < 380 - r) {{
+            y += v;
+            draw();
+            requestAnimationFrame(animate);
+        }} else {{
+            animating = false;
+            status.innerText = "FUNDO ATINGIDO";
         }}
-
-        // Estado Zero (Posição inicial baseada na densidade)
-        desenharCena(flutua ? pos_final : pos_inicial);
-    </script>
-</body>
-</html>
+    }}
+    draw();
+</script>
 """
+components.html(html_content, height=550)
 
-# Renderiza a interface do app (Define altura suficiente para evitar barras de rolagem)
-components.html(html_simulador, height=500)
+# --- DETALHAMENTO TÉCNICO (MEMÓRIA DE CÁLCULO) ---
+with st.expander("Visualizar Memória de Cálculo (Rigor de Engenharia)"):
+    st.markdown(f"""
+    **1. Volume da Esfera ($V_e$):**
+    $$V_e = \\frac{{4}}{{3}} \pi r^3 = \\frac{{4}}{{3}} \pi ({r_m:.6f})^3 = {vol_m3:.4e} \, m^3$$
+
+    **2. Densidade da Esfera ($\\rho_e$):**
+    $$\\rho_e = \\frac{{m}}{{V_e}} = \\frac{{{m_g/1000:.6f}}}{{{vol_m3:.4e}}} = {rho_e:.2f} \, kg/m^3$$
+
+    **3. Velocidade de Queda ($v$):**
+    $$v = \\frac{{d}}{{t}} = \\frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s$$
+
+    **4. Viscosidade Dinâmica ($\\eta$):**
+    $$\\eta = \\frac{{2 r^2 g (\\rho_e - \\rho_l)}}{{9 v}} = {viscosidade:.4f} \, Pa \cdot s$$
+    """)
