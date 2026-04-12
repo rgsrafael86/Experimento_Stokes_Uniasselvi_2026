@@ -64,12 +64,6 @@ empuxo_N = rho_l * vol_m3 * g
 v_terminal = dist_m / t_s
 viscosidade_aparente = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
 
-# Correção de Efeito de Parede (Ladenburg)
-raio_proveta_mm = 30.65
-fator_ladenburg = 1 + 2.1 * (r_mm / raio_proveta_mm)
-v_corrigida = v_terminal * fator_ladenburg
-viscosidade_corrigida = viscosidade_aparente / fator_ladenburg if fator_ladenburg > 0 else 0
-
 is_floating = rho_e < rho_l
 
 # 5. Interface Principal
