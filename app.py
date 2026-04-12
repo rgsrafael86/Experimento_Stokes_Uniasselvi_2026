@@ -14,15 +14,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Entradas Paramétricas (Barra Lateral)
+# 2. Entradas Paramétricas de Precisão (Barra Lateral)
 with st.sidebar:
     st.header("Controles do Ensaio")
-    st.markdown("Ajuste os parâmetros antes do lançamento.")
-    r_mm = st.slider("Raio da Esfera (mm)", 1.0, 10.0, 3.0, 0.1)
-    m_g = st.slider("Massa da Esfera (g)", 0.1, 10.0, 0.91, 0.01)
-    rho_l = st.slider("Densidade do Fluido (kg/m³)", 800.0, 1500.0, 982.2, 0.1)
-    dist_m = st.slider("Distância de Queda (m)", 0.1, 1.0, 0.435, 0.005)
-    t_s = st.slider("Tempo de Queda (s)", 0.1, 5.0, 0.73, 0.01)
+    st.markdown("Utilize digitação direta ou setas para ajuste fino.")
+    
+    r_mm = st.number_input("Raio da Esfera (mm)", min_value=1.0, max_value=10.0, value=3.00, step=0.05, format="%.2f")
+    m_g = st.number_input("Massa da Esfera (g)", min_value=0.1, max_value=10.0, value=0.91, step=0.01, format="%.2f")
+    rho_l = st.number_input("Densidade do Fluido (kg/m³)", min_value=800.0, max_value=1500.0, value=982.2, step=0.1, format="%.1f")
+    dist_m = st.number_input("Distância de Queda (m)", min_value=0.1, max_value=1.0, value=0.435, step=0.005, format="%.3f")
+    t_s = st.number_input("Tempo de Queda (s)", min_value=0.1, max_value=5.0, value=0.73, step=0.01, format="%.2f")
 
 # 3. Processamento Analítico (Background)
 g = 9.81
@@ -30,7 +31,11 @@ r_m = r_mm / 1000
 vol_m3 = (4/3) * math.pi * (r_m**3)
 rho_e = (m_g / 1000) / vol_m3
 v_terminal = dist_m / t_s
-viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal)
+
+if v_terminal > 0:
+    viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal)
+else:
+    viscosidade = 0
 
 is_floating = rho_e < rho_l
 
@@ -45,22 +50,23 @@ if 'lancado' not in st.session_state:
     st.session_state.lancado = False
 
 with col_dados:
-    st.subheader("Laudo Analítico")
-    placeholder_resultados = st.empty()
+    st.subheader("Laudo Analítico e Memória de Cálculo")
     
     # Botão de Ação Primária
     if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
         st.session_state.lancado = True
 
-    # Lógica de Revelação
+    placeholder_resultados = st.empty()
+    
+    # Lógica de Revelação Sincronizada
     if not st.session_state.lancado:
         placeholder_resultados.info("Aguardando inicialização do ensaio. Ajuste os parâmetros na barra lateral e clique em 'Lançar Esfera'.")
     else:
         with placeholder_resultados.container():
             if is_floating:
-                st.error("⚠️ FALHA: Densidade da esfera menor que a do fluido. O empuxo impede a descida.")
+                st.error("⚠️ FALHA FÍSICA: Densidade da esfera menor que a do fluido. O empuxo impede a descida.")
             else:
-                # O painel renderiza um aviso, aguarda 1.5s (tempo da animação) e exibe os dados
+                # Sincroniza o tempo de espera do painel com o tempo da animação visual (1.5s)
                 with st.spinner("Analisando cinemática de queda..."):
                     time.sleep(1.5) 
                 
@@ -69,10 +75,25 @@ with col_dados:
                 m1.metric("VESF (M/S)", f"{v_terminal:.4f}")
                 m2.metric("VISCOSIDADE (PA.S)", f"{viscosidade:.4f}")
                 m3.metric("DENS. ESF (KG/M³)", f"{rho_e:.2f}")
+                
+                st.markdown("---")
+                st.markdown("### Memória de Cálculo")
+                st.markdown(f"""
+                **1. Volume da Esfera ($V_e$):**
+                $$V_e = \\frac{{4}}{{3}} \pi r^3 = \\frac{{4}}{{3}} \pi ({r_m:.6f})^3 = {vol_m3:.4e} \, m^3$$
+
+                **2. Densidade da Esfera ($\\rho_e$):**
+                $$\\rho_e = \\frac{{m}}{{V_e}} = \\frac{{{m_g/1000:.6f}}}{{{vol_m3:.4e}}} = {rho_e:.2f} \, kg/m^3$$
+
+                **3. Velocidade de Queda ($v$):**
+                $$v = \\frac{{d}}{{t}} = \\frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s$$
+
+                **4. Viscosidade Dinâmica ($\\eta$):**
+                $$\\eta = \\frac{{2 r^2 g (\\rho_e - \\rho_l)}}{{9 v}} = {viscosidade:.4f} \, Pa \cdot s$$
+                """)
 
 with col_visual:
     # 5. Motor de Renderização HTML/JS (Proveta no Canto)
-    # A variável js_autoplay define se a esfera cai ao carregar o iframe
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
     
     html_content = f"""
@@ -88,12 +109,11 @@ with col_visual:
         const statusText = document.getElementById('status');
         
         const autoPlay = {js_autoplay};
-        const r_pixel = Math.min({r_mm} * 2.5, 40); // Escala visual do raio
+        const r_pixel = Math.min({r_mm} * 2.5, 40); 
         
-        let y = 30; // Posição inicial no topo
-        const y_final = 420 - r_pixel - 10; // Fundo da proveta
+        let y = 30; 
+        const y_final = 420 - r_pixel - 10; 
         
-        // A animação dura exatamente 1.5s (90 frames a 60fps) para sincronizar com o Python time.sleep(1.5)
         const v_pixel = (y_final - y) / 90; 
 
         function drawCylinder() {{
@@ -124,7 +144,7 @@ with col_visual:
             ctx.fillStyle = "#f08080";
             ctx.fill();
             
-            // Brilho da esfera
+            // Brilho Metálico
             ctx.beginPath();
             ctx.arc(canvas.width/2 - r_pixel*0.3, y - r_pixel*0.3, r_pixel*0.2, 0, Math.PI*2);
             ctx.fillStyle = "rgba(255,255,255,0.3)";
@@ -138,7 +158,7 @@ with col_visual:
                 requestAnimationFrame(animate);
             }} else {{
                 statusText.innerText = "FUNDO ATINGIDO";
-                statusText.style.color = "#3fb950"; // Verde Sucesso
+                statusText.style.color = "#3fb950";
             }}
         }}
 
@@ -146,15 +166,14 @@ with col_visual:
         
         if(autoPlay) {{
             requestAnimationFrame(animate);
-        }} else if ({is_floating}) {{
-            y = y_final; // Desenha no fundo se estiver flutuando
+        }} else if ({'true' if is_floating else 'false'}) {{
+            y = y_final; 
             drawCylinder();
         }}
     </script>
     """
-    # A altura de 500px garante que a proveta não crie barras de rolagem
     components.html(html_content, height=520)
 
-# Reseta o estado para permitir novos laudos caso o usuário mude um slider
+# Reseta o estado para permitir novos laudos caso o usuário altere algum parâmetro
 if st.session_state.lancado:
     st.session_state.lancado = False
