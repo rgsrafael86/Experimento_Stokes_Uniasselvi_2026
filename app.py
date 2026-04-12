@@ -3,14 +3,17 @@ import streamlit.components.v1 as components
 import math
 import time
 
-# 1. Configuração do Dashboard
-st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="expanded")
+# 1. Configuração do Dashboard (Responsivo)
+st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="auto")
 
+# CSS Reduzido (A cor principal agora é gerenciada pelo config.toml)
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
-    div[data-testid="stMetricValue"] { font-size: 28px; color: #f0f2f6; }
-    div[data-testid="stSidebar"] { border-right: 1px solid #30363d; }
+    div[data-testid="stMetricValue"] { font-size: 26px; color: #58a6ff; }
+    /* Ajuste de espaçamento para Mobile */
+    @media (max-width: 768px) {
+        div[data-testid="stMetricValue"] { font-size: 22px; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -27,7 +30,7 @@ if 'r' not in st.session_state:
     st.session_state.t = 0.73
     st.session_state.lancado = False
 
-# 3. Sidebar (Controles)
+# 3. Sidebar (Controles adaptáveis para menu hambúrguer no celular)
 with st.sidebar:
     st.header("Presets de Experimento")
     col_b1, col_b2, col_b3 = st.columns(3)
@@ -58,35 +61,34 @@ rho_e = (m_g / 1000) / vol_m3
 v_terminal = dist_m / t_s
 
 viscosidade = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
-viscosidade_cp = viscosidade * 1000  # Conversão para Centipoise (1 Pa.s = 1000 cP)
+viscosidade_cp = viscosidade * 1000  
 
 is_floating = rho_e < rho_l
 
 # 5. Interface Principal
-# Cabeçalho Institucional Discreto
+# Cabeçalho Institucional 
 st.markdown("""
-<div style="color: #6e7681; font-size: 13px; margin-top: -30px; margin-bottom: 20px; line-height: 1.5;">
-    <b>CENTRO UNIVERSITÁRIO LEONARDO DA VINCI – UNIASSELVI</b><br>
-    Faculdade de engenharias mecânica e produção.<br>
-    <i>Cristan W. | João V. | Luciane A. | Rafael G.</i>
+<div style="color: #8b949e; font-size: 12px; margin-top: -40px; margin-bottom: 25px; line-height: 1.6; text-transform: uppercase; letter-spacing: 0.5px;">
+    <b>Centro Universitário Leonardo da Vinci – UNIASSELVI</b><br>
+    Faculdade de Engenharias Mecânica e Produção<br>
+    <span style="color: #58a6ff;">Cristan W. | João V. | Luciane A. | Rafael G.</span>
 </div>
 """, unsafe_allow_html=True)
 
 st.title("Laboratório Digital - Lei de Stokes")
 st.markdown("---")
 
+# Layout de Colunas (No desktop = lado a lado; No Mobile = empilhadas)
 col_dados, col_visual = st.columns([3, 2])
 
 with col_dados:
     st.subheader("Controle de Ensaio")
     
-    # Botões de Ação Horizontal
-    btn_col1, btn_col2 = st.columns([1, 1])
-    with btn_col1:
-        if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
-            st.session_state.lancado = True
-    with btn_col2:
-        st.link_button("📹 Acessar Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
+    # Botões adaptativos para telas pequenas
+    if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"):
+        st.session_state.lancado = True
+    
+    st.link_button("📹 Acessar Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     placeholder = st.empty()
@@ -102,18 +104,18 @@ with col_dados:
                     time.sleep(t_s)
                 
                 st.success("✅ Fundo atingido. Equilíbrio de Stokes calculado.")
+                
+                # KPIs responsivos
                 m1, m2, m3 = st.columns(3)
                 m1.metric("VELOCIDADE", f"{v_terminal:.4f} m/s")
                 
-                # Exibição da Viscosidade em Pa.s com cP logo abaixo
                 m2.metric("VISCOSIDADE (η)", f"{viscosidade:.4f} Pa·s")
-                m2.markdown(f"<div style='color:#8b949e; font-size:16px; margin-top:-15px;'><b>{viscosidade_cp:.2f} cP</b></div>", unsafe_allow_html=True)
+                m2.markdown(f"<div style='color:#8b949e; font-size:15px; margin-top:-15px; font-weight:bold;'>{viscosidade_cp:.2f} cP</div>", unsafe_allow_html=True)
                 
                 m3.metric("DENS. ESF (ρ)", f"{rho_e:.1f} kg/m³")
                 
                 # Memória de Cálculo Expansível
                 with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
-                    
                     st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
                     st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = \frac{{4}}{{3}} \pi ({r_m:.6f})^3 = {vol_m3:.3e} \, m^3")
                     st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = \frac{{{m_g/1000:.6f}}}{{{vol_m3:.3e}}} = {rho_e:.2f} \, kg/m^3")
@@ -123,7 +125,6 @@ with col_dados:
 
                     st.markdown("**3. Equação da Lei de Stokes**")
                     st.markdown("""
-                    **Declaração de Variáveis:**
                     * **$\\eta$**: Viscosidade dinâmica do fluido ($Pa \cdot s$)
                     * **$r$**: Raio da esfera ($m$)
                     * **$g$**: Aceleração da gravidade ($9,81 \, m/s^2$)
@@ -140,11 +141,12 @@ with col_dados:
 with col_visual:
     js_autoplay = "true" if (st.session_state.lancado and not is_floating) else "false"
     
+    # HTML responsivo focado na visualização mobile (flexbox)
     html_content = f"""
-    <div style="display: flex; flex-direction: column; align-items: center; background: #161b22; padding: 20px; border-radius: 10px; height: 100%;">
-        <div style="color: #8b949e; margin-bottom: 15px; font-family: sans-serif; font-size: 14px;">Proveta Graduada</div>
-        <canvas id="stokesCanvas" width="220" height="420" style="background: #0d1117;"></canvas>
-        <div id="status" style="margin-top:15px; color:#58a6ff; font-family:sans-serif; font-weight:bold;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent; padding: 10px; width: 100%;">
+        <div style="color: #8b949e; margin-bottom: 10px; font-family: sans-serif; font-size: 14px; text-align: center;">Monitoramento da Proveta</div>
+        <canvas id="stokesCanvas" width="220" height="420" style="background: #0d1117; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></canvas>
+        <div id="status" style="margin-top:15px; color:#58a6ff; font-family:sans-serif; font-weight:bold; text-align: center;">
             {('AQUISIÇÃO DE DADOS...' if st.session_state.lancado and not is_floating else 'SISTEMA PRONTO')}
         </div>
     </div>
@@ -192,7 +194,7 @@ with col_visual:
                 ctx.beginPath(); ctx.moveTo(150, mark_y); ctx.lineTo(160, mark_y); ctx.stroke();
                 
                 if (i !== 0) ctx.fillText(mark_val + "m", 5, mark_y + 4);
-                else ctx.fillText("0.000m", 5, mark_y + 4);
+                else ctx.fillText("0.00m", 5, mark_y + 4);
             }}
 
             ctx.beginPath();
@@ -229,7 +231,8 @@ with col_visual:
         }}
     </script>
     """
-    components.html(html_content, height=520)
+    # A altura adaptável evita cortes na tela do celular
+    components.html(html_content, height=500)
 
 if st.session_state.lancado:
     st.session_state.lancado = False
