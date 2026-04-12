@@ -212,16 +212,16 @@ with col_laudo:
                 with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
                     
                     st.markdown("**1. Determinação da Densidade da Esfera ($\\rho_e$)**")
-                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $V_e$: Volume ($m^3$) | $r$: Raio ($m$) | $m$: Massa ($kg$) | $\\rho_e$: Densidade ($kg/m^3$)</div>", unsafe_allow_html=True)
+                    st.markdown("**Legenda:** Ve: Volume (m³) | r: Raio (m) | m: Massa (kg) | ρ_e: Densidade (kg/m³)")
                     st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3")
                     st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = {rho_e:.2f} \, kg/m^3")
 
                     st.markdown("**2. Determinação da Velocidade ($v$)**")
-                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $v$: Velocidade ($m/s$) | $d$: Distância ($m$) | $t$: Tempo ($s$)</div>", unsafe_allow_html=True)
+                    st.markdown("**Legenda:** v: Velocidade (m/s) | d: Distância (m) | t: Tempo (s)")
                     st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_terminal:.4f} \, m/s")
 
                     st.markdown("**3. Equação da Lei de Stokes**")
-                    st.markdown("<div style='color:#8b949e; font-size:13px; margin-bottom:10px;'><b>Legenda:</b> $\\eta$: Viscosidade ($Pa\cdot s$) | $g$: Gravidade ($9,81 \, m/s^2$) | $\\rho_L$: Densidade do Fluido ($kg/m^3$)</div>", unsafe_allow_html=True)
+                    st.markdown("**Legenda:** η: Viscosidade (Pa·s) | g: Gravidade (9,81 m/s²) | ρ_L: Densidade do Fluido (kg/m³)")
                     st.latex(r"\eta = \frac{2 \cdot r^2 \cdot g \cdot (\rho_e - \rho_L)}{9 \cdot v}")
                     st.latex(rf"\eta = \frac{{2 \cdot ({r_m:.5f})^2 \cdot 9,81 \cdot ({rho_e:.2f} - {rho_l:.1f})}}{{9 \cdot {v_terminal:.4f}}} = \mathbf{{{viscosidade:.4f} \, Pa \cdot s}}")
                     st.latex(rf"\eta_{{cP}} = {viscosidade:.4f} \cdot 1000 = \mathbf{{{viscosidade_cp:.2f} \, cP}}")
