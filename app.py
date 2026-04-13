@@ -69,6 +69,10 @@ vol_m3 = (4/3) * math.pi * (r_m**3)
 rho_e = (m_g / 1000) / vol_m3
 v_term = dist_m / t_s
 
+# Formatação Específica para LaTeX (Notação Científica Padrão)
+mantissa, exp = f"{vol_m3:.3e}".split('e')
+vol_m3_latex = f"{mantissa} \\times 10^{{{int(exp)}}}"
+
 # Viscosidades
 eta = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_term) if v_term > 0 else 0
 nu = eta / rho_l if rho_l > 0 else 0
@@ -119,7 +123,7 @@ with col_res:
             r1c1.metric("VELOCIDADE", f"{v_term:.4f} m/s")
             r1c2.metric("DENSIDADE (ρ_e)", f"{rho_e:.1f} kg/m³")
             
-            # Linha 2 (Dinâmica e Cinemática com conversões no mesmo tamanho)
+            # Linha 2 (Dinâmica e Cinemática)
             r2c1, r2c2 = st.columns(2)
             r2c1.metric("VISC. DINÂMICA (η)", f"{eta:.4f} Pa·s")
             r2c1.markdown(f"<div class='metric-conversao' style='margin-top:-16px; margin-bottom:15px;'>{eta*1000:.1f} cP</div>", unsafe_allow_html=True)
@@ -134,7 +138,7 @@ with col_res:
             with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
                 st.markdown("**1. Densidade da Esfera (ρ_e):**")
                 st.markdown("**Legenda:** Ve: Volume (m³) | r: Raio (m) | m: Massa (kg) | ρ_e: Densidade (kg/m³)")
-                st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3 \quad \rightarrow \quad \rho_e = \frac{{m}}{{V_e}} = {rho_e:.1f} \, kg/m^3")
+                st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3_latex} \, m^3 \quad \rightarrow \quad \rho_e = \frac{{m}}{{V_e}} = {rho_e:.1f} \, kg/m^3")
 
                 st.markdown("**2. Velocidade Terminal (v):**")
                 st.markdown("**Legenda:** v: Velocidade (m/s) | d: Distância (m) | t: Tempo (s)")
