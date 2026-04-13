@@ -187,7 +187,7 @@ with col_visual:
     components.html(html_content, height=480)
 
 with col_laudo:
-    st.subheader("Laudo Técnico")
+    st.subheader("Resultados")
     placeholder = st.empty()
     
     if not st.session_state.lancado:
