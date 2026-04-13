@@ -6,11 +6,11 @@ import time
 # 1. Configuração do Dashboard (Responsivo)
 st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS para métricas e layout
+# CSS para métricas e clonagem de estilo para as conversões
 st.markdown("""
     <style>
-    div[data-testid="stMetricValue"] { font-size: 24px; color: #58a6ff; }
-    @media (max-width: 768px) { div[data-testid="stMetricValue"] { font-size: 20px; } }
+    div[data-testid="stMetricValue"], .metric-conversao { font-size: 24px; color: #58a6ff; font-family: "Source Sans Pro", sans-serif; font-weight: 400; }
+    @media (max-width: 768px) { div[data-testid="stMetricValue"], .metric-conversao { font-size: 20px; } }
     </style>
     """, unsafe_allow_html=True)
 
@@ -68,10 +68,12 @@ g, r_m = 9.81, r_mm / 1000
 vol_m3 = (4/3) * math.pi * (r_m**3)
 rho_e = (m_g / 1000) / vol_m3
 v_term = dist_m / t_s
+
 # Viscosidades
 eta = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_term) if v_term > 0 else 0
 nu = eta / rho_l if rho_l > 0 else 0
-# Reynolds (Baseado no diâmetro da esfera para validação de Stokes)
+
+# Reynolds (Baseado no diâmetro da esfera)
 reynolds = (rho_l * v_term * (2 * r_m)) / eta if eta > 0 else 0
 
 # 6. SIMULAÇÃO E RESULTADOS
@@ -111,19 +113,27 @@ with col_res:
     else:
         with placeholder.container():
             time.sleep(t_s); st.success("Análise Concluída")
+            
+            # Linha 1
             r1c1, r1c2 = st.columns(2)
             r1c1.metric("VELOCIDADE", f"{v_term:.4f} m/s")
             r1c2.metric("DENSIDADE (ρ_e)", f"{rho_e:.1f} kg/m³")
             
+            # Linha 2 (Dinâmica e Cinemática com conversões no mesmo tamanho)
             r2c1, r2c2 = st.columns(2)
-            r2c1.metric("VISC. DINÂMICA (η)", f"{eta:.4f} Pa·s", f"{eta*1000:.1f} cP")
-            r2c2.metric("VISC. CINEMÁTICA (ν)", f"{nu:.6f} m²/s", f"{nu*1e6:.1f} cSt")
+            r2c1.metric("VISC. DINÂMICA (η)", f"{eta:.4f} Pa·s")
+            r2c1.markdown(f"<div class='metric-conversao' style='margin-top:-16px; margin-bottom:15px;'>{eta*1000:.1f} cP</div>", unsafe_allow_html=True)
             
+            r2c2.metric("VISC. CINEMÁTICA (ν)", f"{nu:.6f} m²/s")
+            r2c2.markdown(f"<div class='metric-conversao' style='margin-top:-16px; margin-bottom:15px;'>{nu*1e6:.1f} cSt</div>", unsafe_allow_html=True)
+            
+            # Linha 3
             st.metric("NÚMERO DE REYNOLDS (Re)", f"{reynolds:.4f}")
 
+            # Memória de Cálculo
             with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
                 st.markdown("**1. Densidade da Esfera (ρ_e):**")
-                st.markdown("**Legenda:** Ve: Volume (m3) | r: Raio (m) | m: Massa (kg) | ρ_e: Densidade (kg/m3)")
+                st.markdown("**Legenda:** Ve: Volume (m³) | r: Raio (m) | m: Massa (kg) | ρ_e: Densidade (kg/m³)")
                 st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3 \quad \rightarrow \quad \rho_e = \frac{{m}}{{V_e}} = {rho_e:.1f} \, kg/m^3")
 
                 st.markdown("**2. Velocidade Terminal (v):**")
@@ -131,8 +141,11 @@ with col_res:
                 st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_term:.4f} \, m/s")
 
                 st.markdown("**3. Viscosidade Dinâmica (η) e Cinemática (ν):**")
-                st.markdown("**Legenda:** η: Viscosidade Dinâmica (Pa·s) | ν: Viscosidade Cinemática (m2/s) | ρ_L: Dens. Fluido")
-                st.latex(rf"\eta = \frac{{2r^2 g (\rho_e - \rho_L)}}{{9v}} = {eta:.4f} \, Pa \cdot s \quad \rightarrow \quad \nu = \frac{{\eta}}{{\rho_L}} = {nu:.6f} \, m^2/s")
+                st.markdown("**Legenda:** η: Visc. Dinâmica (Pa·s) | ν: Visc. Cinemática (m²/s) | ρ_L: Dens. Fluido")
+                st.latex(rf"\eta = \frac{{2r^2 g (\rho_e - \rho_L)}}{{9v}} = {eta:.4f} \, Pa \cdot s")
+                st.latex(rf"\eta_{{cP}} = \eta \cdot 1000 = \mathbf{{{eta*1000:.1f} \, cP}}")
+                st.latex(rf"\nu = \frac{{\eta}}{{\rho_L}} = {nu:.6f} \, m^2/s")
+                st.latex(rf"\nu_{{cSt}} = \nu \cdot 10^6 = \mathbf{{{nu*1e6:.1f} \, cSt}}")
 
                 st.markdown("**4. Número de Reynolds (Re):**")
                 st.markdown("**Legenda:** Re: Reynolds | D: Diâmetro Esfera (m) | ρ_L: Dens. Fluido | η: Visc. Dinâmica")
