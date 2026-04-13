@@ -49,7 +49,7 @@ with col_preset:
         st.session_state.update(dados_ensaios["Media"]); st.session_state.lancado = False
     if st.button("Esfera Menor", use_container_width=True): 
         st.session_state.update(dados_ensaios["Menor"]); st.session_state.lancado = False
-    st.link_button("📹 Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
+    st.link_button("📹 Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:v:/g/personal/7116971_aluno_uniasselvi_com_br/IQBjevxAbXyfTb1pXau3QXJtAZj10je1zsRADvYO5NCrW2M", use_container_width=True)
 
 with col_medicao:
     r_mm = st.number_input("Raio da Esfera (mm)", value=st.session_state.r, step=0.01, format="%.2f")
