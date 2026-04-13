@@ -3,17 +3,18 @@ import streamlit.components.v1 as components
 import math
 import time
 
-# 1. Configuração do Dashboard
+# 1. Configuração do Dashboard (Responsivo)
 st.set_page_config(page_title="Laboratório Digital - Stokes", layout="wide", initial_sidebar_state="collapsed")
 
+# CSS para métricas e layout
 st.markdown("""
     <style>
-    div[data-testid="stMetricValue"] { font-size: 26px; color: #58a6ff; }
-    @media (max-width: 768px) { div[data-testid="stMetricValue"] { font-size: 22px; } }
+    div[data-testid="stMetricValue"] { font-size: 24px; color: #58a6ff; }
+    @media (max-width: 768px) { div[data-testid="stMetricValue"] { font-size: 20px; } }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Dados Experimentais
+# 2. Dados Experimentais (Extração via Vídeo)
 dados_ensaios = {
     "Maior": {"r": 5.55, "m": 5.60, "t": 0.49},
     "Media": {"r": 3.50, "m": 1.43, "t": 0.83},
@@ -26,7 +27,7 @@ if 'r' not in st.session_state:
 
 # 3. Cabeçalho Institucional
 st.markdown("""
-<div style="color: #8b949e; font-size: 12px; margin-top: -40px; margin-bottom: 25px; line-height: 1.6; text-transform: uppercase;">
+<div style="color: #8b949e; font-size: 12px; margin-top: -40px; margin-bottom: 25px; line-height: 1.6; text-transform: uppercase; letter-spacing: 0.5px;">
     <b>Centro Universitário Leonardo da Vinci – UNIASSELVI</b><br>
     Faculdade de Engenharias Mecânica e Produção<br>
     <span style="color: #58a6ff;">Cristan W. | João V. | Luciane A. | Rafael G.</span>
@@ -36,15 +37,18 @@ st.markdown("""
 st.title("Laboratório Digital - Lei de Stokes")
 st.markdown("---")
 
-# 4. Painel de Controle
+# 4. PAINEL DE CONTROLE 
 st.subheader("⚙️ Configuração do Ensaio")
 col_preset, col_medicao, col_constante = st.columns([1, 1.5, 1.5])
 
 with col_preset:
     st.markdown("**Seleção de Esfera:**")
-    if st.button("Esfera Maior", use_container_width=True): st.session_state.update(dados_ensaios["Maior"]); st.session_state.lancado = False
-    if st.button("Esfera Média", use_container_width=True): st.session_state.update(dados_ensaios["Media"]); st.session_state.lancado = False
-    if st.button("Esfera Menor", use_container_width=True): st.session_state.update(dados_ensaios["Menor"]); st.session_state.lancado = False
+    if st.button("Esfera Maior", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Maior"]); st.session_state.lancado = False
+    if st.button("Esfera Média", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Media"]); st.session_state.lancado = False
+    if st.button("Esfera Menor", use_container_width=True): 
+        st.session_state.update(dados_ensaios["Menor"]); st.session_state.lancado = False
     st.link_button("📹 Vídeos do Ensaio", "https://uniasselvi01-my.sharepoint.com/:f:/g/personal/7116971_aluno_uniasselvi_com_br/IgAp_RKiqd3HQI4cu6ozT_irAZtbwY9ujDkYZVANoP2A51I?e=E6TI3o", use_container_width=True)
 
 with col_medicao:
@@ -54,28 +58,27 @@ with col_medicao:
 
 with col_constante:
     rho_l = st.number_input("Dens. Fluido (kg/m³)", value=982.2, step=0.1)
-    dist_m = st.number_input("Distância de Queda (m)", value=0.435, step=0.005, format="%.3f")
-    d_proveta_mm = st.number_input("Diâmetro Proveta (mm)", value=61.3, step=0.1)
+    dist_m = st.number_input("Distância (m)", value=0.435, step=0.005, format="%.3f")
+    d_prov_mm = st.number_input("Diâmetro Proveta (mm)", value=61.30, step=0.1)
 
-# 5. Cálculos de Engenharia
-g = 9.81
-r_m = r_mm / 1000
-d_proveta_m = d_proveta_mm / 1000
+st.markdown("---")
+
+# 5. Processamento Analítico
+g, r_m = 9.81, r_mm / 1000
 vol_m3 = (4/3) * math.pi * (r_m**3)
 rho_e = (m_g / 1000) / vol_m3
-v_terminal = dist_m / t_s
-
-# Dinâmica
-eta = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_terminal) if v_terminal > 0 else 0
-# Cinemática
+v_term = dist_m / t_s
+# Viscosidades
+eta = (2 * (r_m**2) * g * (rho_e - rho_l)) / (9 * v_term) if v_term > 0 else 0
 nu = eta / rho_l if rho_l > 0 else 0
-# Reynolds
-reynolds = (rho_l * v_terminal * d_proveta_m) / eta if eta > 0 else 0
+# Reynolds (Baseado no diâmetro da esfera para validação de Stokes)
+reynolds = (rho_l * v_term * (2 * r_m)) / eta if eta > 0 else 0
 
-# 6. Exibição
+# 6. SIMULAÇÃO E RESULTADOS
 col_visual, col_res = st.columns([2, 3], gap="large")
 
 with col_visual:
+    st.subheader("Análise Cinemática")
     if st.button("🚀 LANÇAR ESFERA", use_container_width=True, type="primary"): st.session_state.lancado = True
     js_autoplay = "true" if (st.session_state.lancado and rho_e >= rho_l) else "false"
     html_content = f"""
@@ -106,27 +109,33 @@ with col_res:
     placeholder = st.empty()
     if not st.session_state.lancado: placeholder.info("Aguardando lançamento...")
     else:
-        time.sleep(t_s)
         with placeholder.container():
-            c1, c2, c3 = st.columns(3)
-            c1.metric("VELOCIDADE", f"{v_terminal:.4f} m/s")
-            c2.metric("DINÂMICA (η)", f"{eta:.4f} Pa·s")
-            c3.metric("REYNOLDS (Re)", f"{reynolds:.2f}")
+            time.sleep(t_s); st.success("Análise Concluída")
+            r1c1, r1c2 = st.columns(2)
+            r1c1.metric("VELOCIDADE", f"{v_term:.4f} m/s")
+            r1c2.metric("DENSIDADE (ρ_e)", f"{rho_e:.1f} kg/m³")
             
-            c4, c5, c6 = st.columns(3)
-            c4.metric("DENSIDADE (ρ_e)", f"{rho_e:.1f} kg/m³")
-            c5.metric("CINEMÁTICA (ν)", f"{nu:.6f} m²/s")
-            c6.metric("VISC. (cP)", f"{eta*1000:.1f} cP")
+            r2c1, r2c2 = st.columns(2)
+            r2c1.metric("VISC. DINÂMICA (η)", f"{eta:.4f} Pa·s", f"{eta*1000:.1f} cP")
+            r2c2.metric("VISC. CINEMÁTICA (ν)", f"{nu:.6f} m²/s", f"{nu*1e6:.1f} cSt")
+            
+            st.metric("NÚMERO DE REYNOLDS (Re)", f"{reynolds:.4f}")
 
-            with st.expander("📊 Memória de Cálculo Completa", expanded=True):
-                st.markdown("**1. Densidade da Esfera:**")
-                st.latex(rf"\rho_e = \frac{{m}}{{V_e}} = {rho_e:.2f} \, kg/m^3")
-                st.markdown("**2. Viscosidade Dinâmica (η):**")
-                st.latex(rf"\eta = \frac{{2r^2 g (\rho_e - \rho_L)}}{{9v}} = {eta:.4f} \, Pa \cdot s")
-                st.markdown("**3. Viscosidade Cinemática (ν):**")
-                st.latex(rf"\nu = \frac{{\eta}}{{\rho_L}} = {nu:.6f} \, m^2/s")
+            with st.expander("📊 Acessar Memória de Cálculo", expanded=True):
+                st.markdown("**1. Densidade da Esfera (ρ_e):**")
+                st.markdown("**Legenda:** Ve: Volume (m3) | r: Raio (m) | m: Massa (kg) | ρ_e: Densidade (kg/m3)")
+                st.latex(rf"V_e = \frac{{4}}{{3}} \pi r^3 = {vol_m3:.3e} \, m^3 \quad \rightarrow \quad \rho_e = \frac{{m}}{{V_e}} = {rho_e:.1f} \, kg/m^3")
+
+                st.markdown("**2. Velocidade Terminal (v):**")
+                st.markdown("**Legenda:** v: Velocidade (m/s) | d: Distância (m) | t: Tempo (s)")
+                st.latex(rf"v = \frac{{d}}{{t}} = \frac{{{dist_m}}}{{{t_s}}} = {v_term:.4f} \, m/s")
+
+                st.markdown("**3. Viscosidade Dinâmica (η) e Cinemática (ν):**")
+                st.markdown("**Legenda:** η: Viscosidade Dinâmica (Pa·s) | ν: Viscosidade Cinemática (m2/s) | ρ_L: Dens. Fluido")
+                st.latex(rf"\eta = \frac{{2r^2 g (\rho_e - \rho_L)}}{{9v}} = {eta:.4f} \, Pa \cdot s \quad \rightarrow \quad \nu = \frac{{\eta}}{{\rho_L}} = {nu:.6f} \, m^2/s")
+
                 st.markdown("**4. Número de Reynolds (Re):**")
-                st.markdown("**Legenda:** Re: Reynolds | D_p: Diâmetro Proveta | v: Velocidade")
-                st.latex(rf"Re = \frac{{v \cdot D_p}}{{\nu}} = \frac{{{v_terminal:.4f} \cdot {d_proveta_m}}}{{{nu:.6f}}} = \mathbf{{{reynolds:.2f}}}")
+                st.markdown("**Legenda:** Re: Reynolds | D: Diâmetro Esfera (m) | ρ_L: Dens. Fluido | η: Visc. Dinâmica")
+                st.latex(rf"Re = \frac{{\rho_L \cdot v \cdot (2r)}}{{\eta}} = \frac{{{rho_l} \cdot {v_term:.4f} \cdot {2*r_m:.4f}}}{{{eta:.4f}}} = \mathbf{{{reynolds:.4f}}}")
 
 if st.session_state.lancado: st.session_state.lancado = False
