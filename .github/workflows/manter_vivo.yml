@@ -1,0 +1,55 @@
+name: Manter App Strokes vivo
+on:
+  schedule:
+    - cron: '17 3,9,15,21 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-websocket:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Instalar Dependências e Motor de Renderização (Playwright)
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Executar Simulação de Usuário (Headless Browser)
+        run: |
+          python -c "
+          from playwright.sync_api import sync_playwright
+          import time
+          import random
+          import sys
+          
+          # 1. Jitter para camuflagem de WAF
+          delay = random.randint(0, 1800)
+          print(f'Aguardando {delay} segundos (Jitter)...')
+          time.sleep(delay)
+          
+          # 2. Inicialização do Navegador Virtual
+          try:
+              with sync_playwright() as p:
+                  browser = p.chromium.launch(headless=True)
+                  page = browser.new_page()
+                  
+                  print('Acessando a aplicação e aguardando renderização do DOM...')
+                  # wait_until='networkidle' garante que o JavaScript foi processado e o WebSocket abriu
+                  page.goto('https://patota.streamlit.app/', wait_until='networkidle', timeout=60000)
+                  
+                  # 3. Sustentação da Conexão
+                  print('DOM carregado. Mantendo o WebSocket aberto por 15 segundos para registro na nuvem...')
+                  time.sleep(15)
+                  
+                  print('Status: ONLINE. Interação via WebSocket validada com sucesso.')
+                  browser.close()
+                  sys.exit(0)
+                  
+          except Exception as e:
+              print(f'Falha crítica na renderização ou tempo limite excedido: {e}')
+              sys.exit(1)
+          "
