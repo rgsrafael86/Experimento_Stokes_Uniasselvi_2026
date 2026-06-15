@@ -7,7 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  STREAMLIT_URL: https://patota.streamlit.app/
+  STREAMLIT_URL: https://stokes.streamlit.app/
 
 jobs:
   ping-websocket:
