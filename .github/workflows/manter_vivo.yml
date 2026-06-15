@@ -7,7 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  STREAMLIT_URL: https://stokes.streamlit.app/
+  STREAMLIT_URL: "https://stokes.streamlit.app/"
 
 jobs:
   ping-websocket:
@@ -33,13 +33,106 @@ jobs:
           import time
           import random
           import sys
+          import re
 
           url = os.environ["STREAMLIT_URL"]
 
-          # Jitter reduzido para evitar consumo excessivo do runner
-          delay = random.randint(0, 300)
+          # Para teste: baixo. Depois pode voltar para 300.
+          delay = random.randint(0, 15)
           print(f"Aguardando {delay} segundos de jitter...")
           time.sleep(delay)
+
+          def ler_body(page):
+              try:
+                  return page.locator("body").inner_text(timeout=30000)
+              except Exception as e:
+                  print(f"Falha ao ler body: {e}")
+                  return ""
+
+          def esta_dormindo(texto):
+              texto = texto.lower()
+              indicadores = [
+                  "zzzz",
+                  "gone to sleep",
+                  "this app has gone to sleep",
+                  "would you like to wake it back up",
+                  "yes, get this app back up"
+              ]
+              return any(i in texto for i in indicadores)
+
+          def tentar_acordar(page):
+              print("Tentando clicar no botão de wake-up...")
+
+              # 1 - seletor mais direto para o botão do print
+              try:
+                  page.get_by_role(
+                      "button",
+                      name=re.compile(r"Yes,\s*get this app back up!?", re.I)
+                  ).click(timeout=30000, force=True)
+
+                  print("Clique realizado pelo seletor get_by_role.")
+                  return True
+              except Exception as e:
+                  print(f"get_by_role não clicou: {e}")
+
+              # 2 - botão contendo o texto
+              try:
+                  botao = page.locator("button").filter(
+                      has_text=re.compile(r"get this app back up", re.I)
+                  )
+
+                  print(f"Botões encontrados por texto: {botao.count()}")
+
+                  if botao.count() > 0:
+                      botao.first.click(timeout=30000, force=True)
+                      print("Clique realizado pelo locator button/filter.")
+                      return True
+              except Exception as e:
+                  print(f"button/filter não clicou: {e}")
+
+              # 3 - texto visível
+              try:
+                  texto = page.get_by_text(
+                      re.compile(r"Yes,\s*get this app back up!?", re.I)
+                  )
+
+                  print(f"Textos encontrados: {texto.count()}")
+
+                  if texto.count() > 0:
+                      texto.first.click(timeout=30000, force=True)
+                      print("Clique realizado pelo get_by_text.")
+                      return True
+              except Exception as e:
+                  print(f"get_by_text não clicou: {e}")
+
+              # 4 - JavaScript direto
+              try:
+                  resultado = page.evaluate("""
+                  () => {
+                      const elementos = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+                      const alvo = elementos.find(el =>
+                          (el.innerText || el.textContent || '')
+                          .toLowerCase()
+                          .includes('get this app back up')
+                      );
+
+                      if (alvo) {
+                          alvo.click();
+                          return true;
+                      }
+
+                      return false;
+                  }
+                  """)
+
+                  print(f"Clique via JavaScript: {resultado}")
+
+                  if resultado:
+                      return True
+              except Exception as e:
+                  print(f"JavaScript não clicou: {e}")
+
+              return False
 
           try:
               with sync_playwright() as p:
@@ -62,71 +155,47 @@ jobs:
 
                   print(f"Acessando aplicação: {url}")
 
-                  # Evita networkidle porque Streamlit usa WebSocket/conexões persistentes
                   page.goto(
                       url,
                       wait_until="domcontentloaded",
                       timeout=90000
                   )
 
-                  print("Página carregada. Verificando se o app está dormindo...")
+                  print("Aguardando a tela renderizar...")
+                  time.sleep(15)
 
-                  wake_texts = [
-                      "Yes, get this app back up",
-                      "Get this app back up",
-                      "Wake this app up",
-                      "app back up"
-                  ]
+                  body_text = ler_body(page)
+                  print("Trecho inicial da página:")
+                  print(body_text[:700])
 
-                  clicked = False
+                  if esta_dormindo(body_text):
+                      print("App está dormindo. Tentando acordar...")
 
-                  for text in wake_texts:
-                      try:
-                          locator = page.get_by_text(text, exact=False)
+                      clicou = tentar_acordar(page)
 
-                          if locator.count() > 0:
-                              print(f"Botão de wake-up encontrado: {text}")
-                              locator.first.click(timeout=10000)
-                              clicked = True
-                              break
+                      if not clicou:
+                          print("ERRO: app está dormindo, mas o botão não pôde ser clicado.")
+                          browser.close()
+                          sys.exit(1)
 
-                      except Exception as e:
-                          print(f"Texto não encontrado ou não clicável: {text} | {e}")
+                      print("Botão acionado. Aguardando inicialização do Streamlit...")
+                      time.sleep(150)
 
-                  if clicked:
-                      print("Botão de wake-up clicado. Aguardando o Streamlit iniciar...")
-                      time.sleep(45)
+                      print("Recarregando após wake-up...")
+                      page.reload(wait_until="domcontentloaded", timeout=90000)
+                      time.sleep(30)
+
                   else:
-                      print("Nenhum botão de wake-up encontrado. App pode já estar ativo.")
-                      time.sleep(20)
+                      print("App não parece estar dormindo. Mantendo conexão ativa...")
+                      time.sleep(45)
 
-                  print("Validando conteúdo da página...")
+                  print("Validação final...")
+                  final_text = ler_body(page)
 
-                  try:
-                      body_text = page.locator("body").inner_text(timeout=20000)
-                  except Exception as e:
-                      print(f"Não foi possível ler o corpo da página: {e}")
-                      browser.close()
-                      sys.exit(1)
-
-                  body_text_lower = body_text.lower()
-
-                  sleep_indicators = [
-                      "gone to sleep",
-                      "this app has gone to sleep",
-                      "app has gone to sleep",
-                      "yes, get this app back up"
-                  ]
-
-                  still_sleeping = any(
-                      indicator in body_text_lower
-                      for indicator in sleep_indicators
-                  )
-
-                  if still_sleeping:
-                      print("ERRO: O app ainda parece estar em hibernação.")
-                      print("Trecho da página:")
-                      print(body_text[:1000])
+                  if esta_dormindo(final_text):
+                      print("ERRO: O app ainda parece estar em hibernação após tentativa de wake-up.")
+                      print("Trecho final:")
+                      print(final_text[:1000])
                       browser.close()
                       sys.exit(1)
 
