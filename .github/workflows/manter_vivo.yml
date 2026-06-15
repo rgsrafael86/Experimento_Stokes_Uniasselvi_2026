@@ -1,55 +1,144 @@
-name: Manter App Strokes vivo
+name: Manter App Streamlit vivo
+
 on:
   schedule:
     - cron: '17 3,9,15,21 * * *'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  STREAMLIT_URL: https://patota.streamlit.app/
+
 jobs:
   ping-websocket:
     runs-on: ubuntu-latest
+
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
-          
-      - name: Instalar Dependências e Motor de Renderização (Playwright)
+
+      - name: Instalar Dependências e Motor de Renderização
         run: |
+          python -m pip install --upgrade pip
           pip install playwright
           playwright install --with-deps chromium
 
-      - name: Executar Simulação de Usuário (Headless Browser)
+      - name: Executar Simulação Real de Usuário
         run: |
-          python -c "
-          from playwright.sync_api import sync_playwright
+          python - <<'PY'
+          from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+          import os
           import time
           import random
           import sys
-          
-          # 1. Jitter para camuflagem de WAF
-          delay = random.randint(0, 1800)
-          print(f'Aguardando {delay} segundos (Jitter)...')
+
+          url = os.environ["STREAMLIT_URL"]
+
+          # Jitter reduzido para evitar consumo excessivo do runner
+          delay = random.randint(0, 300)
+          print(f"Aguardando {delay} segundos de jitter...")
           time.sleep(delay)
-          
-          # 2. Inicialização do Navegador Virtual
+
           try:
               with sync_playwright() as p:
-                  browser = p.chromium.launch(headless=True)
-                  page = browser.new_page()
-                  
-                  print('Acessando a aplicação e aguardando renderização do DOM...')
-                  # wait_until='networkidle' garante que o JavaScript foi processado e o WebSocket abriu
-                  page.goto('https://patota.streamlit.app/', wait_until='networkidle', timeout=60000)
-                  
-                  # 3. Sustentação da Conexão
-                  print('DOM carregado. Mantendo o WebSocket aberto por 15 segundos para registro na nuvem...')
-                  time.sleep(15)
-                  
-                  print('Status: ONLINE. Interação via WebSocket validada com sucesso.')
+                  browser = p.chromium.launch(
+                      headless=True,
+                      args=[
+                          "--no-sandbox",
+                          "--disable-dev-shm-usage"
+                      ]
+                  )
+
+                  page = browser.new_page(
+                      viewport={"width": 1366, "height": 768},
+                      user_agent=(
+                          "Mozilla/5.0 (X11; Linux x86_64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0.0.0 Safari/537.36"
+                      )
+                  )
+
+                  print(f"Acessando aplicação: {url}")
+
+                  # Evita networkidle porque Streamlit usa WebSocket/conexões persistentes
+                  page.goto(
+                      url,
+                      wait_until="domcontentloaded",
+                      timeout=90000
+                  )
+
+                  print("Página carregada. Verificando se o app está dormindo...")
+
+                  wake_texts = [
+                      "Yes, get this app back up",
+                      "Get this app back up",
+                      "Wake this app up",
+                      "app back up"
+                  ]
+
+                  clicked = False
+
+                  for text in wake_texts:
+                      try:
+                          locator = page.get_by_text(text, exact=False)
+
+                          if locator.count() > 0:
+                              print(f"Botão de wake-up encontrado: {text}")
+                              locator.first.click(timeout=10000)
+                              clicked = True
+                              break
+
+                      except Exception as e:
+                          print(f"Texto não encontrado ou não clicável: {text} | {e}")
+
+                  if clicked:
+                      print("Botão de wake-up clicado. Aguardando o Streamlit iniciar...")
+                      time.sleep(45)
+                  else:
+                      print("Nenhum botão de wake-up encontrado. App pode já estar ativo.")
+                      time.sleep(20)
+
+                  print("Validando conteúdo da página...")
+
+                  try:
+                      body_text = page.locator("body").inner_text(timeout=20000)
+                  except Exception as e:
+                      print(f"Não foi possível ler o corpo da página: {e}")
+                      browser.close()
+                      sys.exit(1)
+
+                  body_text_lower = body_text.lower()
+
+                  sleep_indicators = [
+                      "gone to sleep",
+                      "this app has gone to sleep",
+                      "app has gone to sleep",
+                      "yes, get this app back up"
+                  ]
+
+                  still_sleeping = any(
+                      indicator in body_text_lower
+                      for indicator in sleep_indicators
+                  )
+
+                  if still_sleeping:
+                      print("ERRO: O app ainda parece estar em hibernação.")
+                      print("Trecho da página:")
+                      print(body_text[:1000])
+                      browser.close()
+                      sys.exit(1)
+
+                  print("Status: ONLINE. Aplicação acessada e validada com sucesso.")
                   browser.close()
                   sys.exit(0)
-                  
-          except Exception as e:
-              print(f'Falha crítica na renderização ou tempo limite excedido: {e}')
+
+          except PlaywrightTimeoutError as e:
+              print(f"Timeout no Playwright: {e}")
               sys.exit(1)
-          "
+
+          except Exception as e:
+              print(f"Falha crítica durante execução: {e}")
+              sys.exit(1)
+          PY
